@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 # Add src to path for c2pa_checker import
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from c2pa_checker import check_c2pa
+from src.c2pa_checker import check_c2pa
 from combine_model import AIEnsemblePredictor
 from forensic import generate_forensic_report
 
@@ -15,7 +15,9 @@ from forensic import generate_forensic_report
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+from flask import send_from_directory
+FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
+app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path='')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
@@ -38,9 +40,11 @@ def allowed_file(filename):
 
 
 # -------- ROUTES --------
+
+# Serve React frontend
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory(FRONTEND_DIST, 'index.html')
 
 
 @app.route('/dashboard')
@@ -178,4 +182,4 @@ if __name__ == '__main__':
     print("🛡️  DeepFake Defender Backend Running")
     print("="*50)
     print(f"Open http://0.0.0.0:{port} in your browser\n")
-    app.run(host="0.0.0.0", debug=False, port=port)
+    app.run(host="0.0.0.0", debug=True, port=port)
