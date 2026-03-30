@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Scanner Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Video Scanner Dashboard</h1>
+        <p class="subtitle" style="margin-bottom: 1.5rem;">Upload a video for deepfake detection</p>
+        <div class="glass-card upload-zone" id="video-drop-area">
+            <div class="icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">⬆️</div>
+            <h3 id="video-upload-text">Drag & Drop Video Here</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem;" id="video-file-info">(MP4, AVI, MOV)</p>
+            <input type="file" id="videoFileElem" style="display:none" accept=".mp4,.avi,.mov">
+        </div>
+        <button class="btn-glow scan-btn" id="video-scan-btn" disabled>Start Scan</button>
+        <div class="console-log" id="video-console">
+            > System ready.<br>
+            > Awaiting video input...
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.getElementById('video-drop-area');
+        const fileInput = document.getElementById('videoFileElem');
+        const consoleLog = document.getElementById('video-console');
+        const scanBtn = document.getElementById('video-scan-btn');
+        const uploadText = document.getElementById('video-upload-text');
+        const fileInfo = document.getElementById('video-file-info');
+        if (!dropArea) return;
+        let selectedFile = null;
+        dropArea.addEventListener('click', () => fileInput.click());
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => { dropArea.classList.add('dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => { dropArea.classList.remove('dragover'); });
+        });
+        dropArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        scanBtn.addEventListener('click', startScan);
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) { selectFile(files[0]); }
+        }
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) { selectFile(e.target.files[0]); }
+        }
+        function selectFile(file) {
+            selectedFile = file;
+            uploadText.textContent = file.name;
+            fileInfo.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB - Click to change`;
+            scanBtn.disabled = false;
+            log(`Video selected: ${file.name}`);
+        }
+        function startScan() {
+            if (!selectedFile) return;
+            scanBtn.disabled = true;
+            scanBtn.textContent = 'Scanning...';
+            processFile(selectedFile);
+        }
+        function log(message) {
+            if (!consoleLog) return;
+            const line = document.createElement('div');
+            line.innerHTML = `> ${message}`;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+        async function processFile(file) {
+            uploadText.textContent = `Analyzing: ${file.name}...`;
+            fileInfo.textContent = 'Processing...';
+            log(`Video received: ${file.name}`);
+            log(`File type: ${file.type || 'Unknown'}`);
+            log('Running deepfake detection...');
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch('/api/analyze_video', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    log(`❌ Error: ${result.error}`);
+                    scanBtn.textContent = 'Error';
+                    return;
+                }
+                // Store result for report page
+                sessionStorage.setItem('videoAnalysisResult', JSON.stringify({
+                    filename: selectedFile.name,
+                    result: result.result
+                }));
+                // Redirect to video report page
+                window.location.href = '/video_report';
+                scanBtn.textContent = 'Done';
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`);
+                scanBtn.textContent = 'Error';
+            }
+        }
+    });
+    </script>
+</body>
+</html>

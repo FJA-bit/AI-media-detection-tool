@@ -4,20 +4,20 @@ import time
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 
-# Add src to path for c2pa_checker import
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add backend to path for imports
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, backend_dir)
+sys.path.insert(0, os.path.join(backend_dir, 'src'))
 
-from src.c2pa_checker import check_c2pa
+from c2pa_checker import check_c2pa
 from combine_model import AIEnsemblePredictor
 from forensic import generate_forensic_report
 
 # -------- CONFIG --------
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(backend_dir, 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
-from flask import send_from_directory
-FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
-app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path='')
+app = Flask(__name__, template_folder=os.path.join(backend_dir, 'templates'), static_folder=os.path.join(backend_dir, 'static'))
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
@@ -34,28 +34,29 @@ except Exception as e:
     print(f"⚠️ Warning: Could not load AI models: {e}")
     print("   C2PA checking will still work, but AI detection will be unavailable.")
 
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 # -------- ROUTES --------
-
-# Serve React frontend
 @app.route('/')
 def index():
-    return send_from_directory(FRONTEND_DIST, 'index.html')
-
+    return render_template('index.html')
 
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/video_dashboard')
+def video_dashboard():
+    return render_template('video_dashboard.html')
 
 @app.route('/report')
 def report():
     return render_template('report.html')
 
+@app.route('/video_report')
+def video_report():
+    return render_template('video_report.html')
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_image():
@@ -155,6 +156,37 @@ def analyze_image():
 
     return jsonify(result)
 
+@app.route('/api/analyze_video', methods=['POST'])
+def analyze_video():
+    """
+    Video deepfake detection endpoint.
+    Accepts a video file, runs detection, and returns the result.
+    """
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
+    # Only allow video extensions
+    allowed_video_ext = {'mp4', 'avi', 'mov'}
+    if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_video_ext:
+        return jsonify({'success': False, 'error': 'File type not allowed'}), 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    try:
+        # Import here to avoid slow startup if not needed
+        from video_detect_standalone import deepfakes_video_predict
+        result_text = deepfakes_video_predict(filepath)
+        result = {'success': True, 'result': result_text}
+    except Exception as e:
+        result = {'success': False, 'error': str(e)}
+    finally:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    return jsonify(result)
 
 @app.route('/api/forensic-report', methods=['POST'])
 def get_forensic_report():
@@ -173,13 +205,11 @@ def get_forensic_report():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 # -------- RUN --------
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 7860))
     print("\n" + "="*50)
     print("🛡️  DeepFake Defender Backend Running")
     print("="*50)
     print(f"Open http://0.0.0.0:{port} in your browser\n")
-    app.run(host="0.0.0.0", debug=True, port=port)
+    app.run(host="0.0.0.0", debug=False, port=port)

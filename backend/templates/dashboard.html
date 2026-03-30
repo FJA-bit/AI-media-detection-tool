@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Scanner Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Image Scanner Dashboard</h1>
+        <p class="subtitle" style="margin-bottom: 1.5rem;">Upload an image for AI detection analysis</p>
+        <div class="glass-card upload-zone" id="drop-area">
+            <div class="icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">⬆️</div>
+            <h3 id="upload-text">Drag & Drop Image Here</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem;" id="file-info">(PNG, JPG, JPEG, WebP)</p>
+            <input type="file" id="fileElem" style="display:none" accept=".png,.jpg,.jpeg,.webp">
+        </div>
+        <button class="btn-glow scan-btn" id="scan-btn" disabled>Start Scan</button>
+
+        <div style="margin-top: 2rem;">
+            <h3 style="margin-bottom: 1rem;">Analysis Steps</h3>
+            <div class="progress-steps">
+                <div class="glass-card step-card" id="step1">
+                    <span class="step-icon">🔍</span>
+                    <strong>C2PA Check</strong>
+                    <div class="status-text">Waiting</div>
+                </div>
+                <div class="glass-card step-card" id="step2">
+                    <span class="step-icon">🎨</span>
+                    <strong>SynthID</strong>
+                    <div class="status-text">Waiting</div>
+                </div>
+                <div class="glass-card step-card" id="step3">
+                    <span class="step-icon">🤖</span>
+                    <strong>AI Model</strong>
+                    <div class="status-text">Waiting</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="console-log" id="console">
+            > System ready.<br>
+            > Awaiting image input...
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>

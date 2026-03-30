@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Scan Report</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Scan Report & Forensics</h1>
+        <p class="subtitle">File: <span id="filename">Unknown</span></p>
+        <div class="glass-card verdict-banner" id="verdict-banner">
+            <div class="verdict-title" id="verdict-title">VERDICT: ANALYZING...</div>
+            <div style="font-size: 0.9rem; margin-top: 5px;" id="verdict-reason">Processing results...</div>
+        </div>
+        <div class="glass-card forensic-layout" style="padding: 2rem; margin-top: 2rem;">
+            <div style="text-align: center;">
+                <div style="margin-bottom: 10px; color: #ccc;">Final Confidence Score</div>
+                <div class="score-circle" id="score-circle">
+                    <div class="score-inner" id="score-value">--%</div>
+                </div>
+                <div style="margin-top: 15px; font-weight: bold;" id="probability-label">Calculating...</div>
+            </div>
+            <div class="detailed-log" id="detailed-log" style="margin-top: 2rem;">
+                [LOG] Loading analysis results...
+            </div>
+        </div>
+        <br>
+        <button class="btn-glow" onclick="location.href='/'">Scan Another File</button>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const resultJson = sessionStorage.getItem('videoAnalysisResult');
+        if (!resultJson) {
+            document.getElementById('verdict-title').textContent = 'NO DATA';
+            document.getElementById('verdict-reason').textContent = 'No analysis result found. Please scan a video first.';
+            return;
+        }
+        const result = JSON.parse(resultJson);
+        document.getElementById('filename').textContent = result.filename || 'Unknown';
+        const verdictBanner = document.getElementById('verdict-banner');
+        const verdictTitle = document.getElementById('verdict-title');
+        const verdictReason = document.getElementById('verdict-reason');
+        let isAI = false;
+        let confidence = 0;
+        let label = '';
+        // Parse result text (e.g., "The video is FAKE. Confidence score: 62.3%")
+        if (result.result) {
+            const match = result.result.match(/(REAL|FAKE).*?([\d.]+)%/i);
+            if (match) {
+                label = match[1].toUpperCase();
+                confidence = parseFloat(match[2]);
+                isAI = (label === 'FAKE');
+            }
+        }
+        if (isAI) {
+            verdictTitle.textContent = 'VERDICT: AI-GENERATED';
+            verdictBanner.style.borderColor = 'var(--neon-red)';
+            verdictBanner.style.background = 'rgba(255, 42, 42, 0.1)';
+        } else {
+            verdictTitle.textContent = 'VERDICT: AUTHENTIC';
+            verdictBanner.style.borderColor = 'var(--neon-green)';
+            verdictBanner.style.background = 'rgba(0, 255, 136, 0.1)';
+            verdictTitle.style.color = 'var(--neon-green)';
+        }
+        verdictReason.textContent = 'Source: AI video detection model analysis';
+        // Confidence score
+        const scoreValue = document.getElementById('score-value');
+        scoreValue.textContent = confidence.toFixed(1) + '%';
+        scoreValue.style.color = isAI ? 'var(--neon-red)' : 'var(--neon-green)';
+        const scoreCircle = document.getElementById('score-circle');
+        scoreCircle.style.background = `conic-gradient(${isAI ? 'var(--neon-red)' : 'var(--neon-green)'} ${confidence}%, transparent 0)`;
+        scoreCircle.style.boxShadow = isAI ? '0 0 20px rgba(255, 42, 42, 0.3)' : '0 0 20px rgba(0, 255, 136, 0.3)';
+        // Probability label
+        const probLabel = document.getElementById('probability-label');
+        let probText = 'Low';
+        if (confidence > 80) probText = 'Very High';
+        else if (confidence > 60) probText = 'High';
+        else if (confidence > 40) probText = 'Medium';
+        probLabel.textContent = `Probability: ${probText}`;
+        probLabel.style.color = isAI ? 'var(--neon-red)' : 'var(--neon-green)';
+        // Log
+        const log = document.getElementById('detailed-log');
+        log.innerHTML = `[LOG] Video analysis completed.<br>[RESULT] ${result.result}`;
+        sessionStorage.removeItem('videoAnalysisResult');
+    });
+    </script>
+</body>
+</html>
