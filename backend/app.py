@@ -62,7 +62,7 @@ def video_report():
 def analyze_image():
     """
     Main analysis endpoint.
-    Pipeline: C2PA Check → (SynthID - skipped) → AI Model
+    Pipeline: C2PA Check → AI Model
     """
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'No file provided'}), 400
@@ -84,7 +84,6 @@ def analyze_image():
         'filename': filename,
         'layers': {
             'c2pa': None,
-            'synthid': None,  # Skipped for now
             'ai_model': None
         },
         'final_verdict': None,
@@ -109,18 +108,12 @@ def analyze_image():
             result['final_verdict'] = 'AI Generated (C2PA Verified)'
             result['layers']['c2pa']['status'] = 'verified'
             
-            # Skip other layers since we have cryptographic proof
-            time.sleep(0.5)
-            result['layers']['synthid'] = {'status': 'skipped', 'reason': 'C2PA verification successful'}
+            # Skip AI model since we have cryptographic proof
             time.sleep(0.5)
             result['layers']['ai_model'] = {'status': 'skipped', 'reason': 'C2PA verification successful'}
             
         else:
-            # ========== LAYER 2: SYNTHID (SKIPPED) ==========
-            time.sleep(1.0)  # Simulated processing time
-            result['layers']['synthid'] = {'status': 'skipped', 'reason': 'Not implemented'}
-            
-            # ========== LAYER 3: AI MODEL ==========
+            # ========== LAYER 2: AI MODEL ==========
             time.sleep(2.0)  # Simulated model loading/inference time
             print(f"[DEBUG] predictor is None: {predictor is None}")
             if predictor is not None:
